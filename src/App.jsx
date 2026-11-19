@@ -1,115 +1,208 @@
 import { useState, useEffect, useRef } from 'react';
 import { Thermometer, Droplets, Sun, Activity, AlertCircle } from 'lucide-react';
 import Navbar from './components/Navbar';
+import SectorTabs from './components/SectorTabs';
 import MetricCard from './components/MetricCard';
 import ControlPanel from './components/ControlPanel';
 import GreenhouseChart from './components/GreenhouseChart';
 import EventLog from './components/EventLog';
 
-const initialChartData = [
-  { time: '12:00', temp: 23.2, humidity: 70.0 },
-  { time: '13:00', temp: 24.0, humidity: 69.2 },
-  { time: '14:00', temp: 24.5, humidity: 68.8 },
-  { time: '15:00', temp: 24.8, humidity: 68.5 },
+const initialSectors = [
+  {
+    id: 'sec-1',
+    name: 'Сектор №1 · Томати',
+    minTemp: 18,
+    maxTemp: 28,
+    minHumidity: 55,
+    targetHumidity: 68,
+    temp: 24.6,
+    humidity: 66.0,
+    light: '45 200',
+    co2: '410',
+    isAuto: true,
+    pumpActive: false,
+    fanActive: false,
+    chart: [
+      { time: '12:00', temp: 23.2, humidity: 68.0 },
+      { time: '13:00', temp: 24.0, humidity: 67.2 },
+      { time: '14:00', temp: 24.3, humidity: 66.5 },
+      { time: '15:00', temp: 24.6, humidity: 66.0 },
+    ],
+  },
+  {
+    id: 'sec-2',
+    name: 'Сектор №2 · Огірки',
+    minTemp: 20,
+    maxTemp: 30,
+    minHumidity: 65,
+    targetHumidity: 76,
+    temp: 26.4,
+    humidity: 74.5,
+    light: '38 900',
+    co2: '435',
+    isAuto: true,
+    pumpActive: false,
+    fanActive: false,
+    chart: [
+      { time: '12:00', temp: 25.1, humidity: 76.0 },
+      { time: '13:00', temp: 25.8, humidity: 75.4 },
+      { time: '14:00', temp: 26.1, humidity: 74.9 },
+      { time: '15:00', temp: 26.4, humidity: 74.5 },
+    ],
+  },
+  {
+    id: 'sec-3',
+    name: 'Сектор №3 · Розсада',
+    minTemp: 19,
+    maxTemp: 26,
+    minHumidity: 60,
+    targetHumidity: 72,
+    temp: 22.8,
+    humidity: 70.2,
+    light: '29 400',
+    co2: '395',
+    isAuto: true,
+    pumpActive: false,
+    fanActive: false,
+    chart: [
+      { time: '12:00', temp: 21.9, humidity: 71.5 },
+      { time: '13:00', temp: 22.3, humidity: 71.0 },
+      { time: '14:00', temp: 22.5, humidity: 70.6 },
+      { time: '15:00', temp: 22.8, humidity: 70.2 },
+    ],
+  },
 ];
 
 export default function App() {
-  const [isAuto, setIsAuto] = useState(true);
-  const [pumpActive, setPumpActive] = useState(false);
-  const [fanActive, setFanActive] = useState(false);
-
-  const [temp, setTemp] = useState(25.1);
-  const [humidity, setHumidity] = useState(68.5);
-  const [chartData, setChartData] = useState(initialChartData);
+  const [sectors, setSectors] = useState(initialSectors);
+  const [activeId, setActiveId] = useState('sec-1');
+  const [showOnlyAlerts, setShowOnlyAlerts] = useState(false);
   const [logs, setLogs] = useState([
-    { id: 1, time: '15:00:00', type: 'info', message: 'Ініціалізація панелі диспетчеризації. Зв’язок із вузлом ESP32 встановлено.' },
+    { id: 1, time: '15:00:00', type: 'info', message: 'Систему диспетчеризації запущено. Підключено 3 сенсорні вузли ESP32.' },
   ]);
 
-  const stateRef = useRef({ isAuto, pumpActive, fanActive, temp, humidity });
+  const activeSector = sectors.find((s) => s.id === activeId) || sectors[0];
+
+  const sectorsRef = useRef(sectors);
   useEffect(() => {
-    stateRef.current = { isAuto, pumpActive, fanActive, temp, humidity };
-  }, [isAuto, pumpActive, fanActive, temp, humidity]);
+    sectorsRef.current = sectors;
+  }, [sectors]);
 
   const addLog = (message, type = 'info') => {
     const now = new Date().toLocaleTimeString('uk-UA');
-    setLogs((prev) => [{ id: Date.now() + Math.random(), time: now, type, message }, ...prev.slice(0, 19)]);
+    setLogs((prev) => [{ id: Date.now() + Math.random(), time: now, type, message }, ...prev.slice(0, 24)]);
+  };
+
+  const updateSector = (id, patch) => {
+    setSectors((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   };
 
   const handleToggleAuto = (newVal) => {
-    setIsAuto(newVal);
+    updateSector(activeSector.id, { isAuto: newVal });
     addLog(
-      newVal ? 'Переведено в автоматичний режим регулювання мікроклімату.' : 'Увімкнено ручний диспетчерський контроль.',
+      `[${activeSector.name}] ${newVal ? 'Увімкнено автоматичний режим.' : 'Переведено в ручний контроль.'}`,
       'action'
     );
   };
 
   const handleTogglePump = (newVal) => {
-    setPumpActive(newVal);
-    addLog(newVal ? 'Оператор увімкнув систему крапельного поливу (Сектор №1).' : 'Оператор вимкнув полив.', 'action');
+    updateSector(activeSector.id, { pumpActive: newVal });
+    addLog(
+      `[${activeSector.name}] Оператор ${newVal ? 'запустив полив' : 'зупинив полив'}.`,
+      'action'
+    );
   };
 
   const handleToggleFan = (newVal) => {
-    setFanActive(newVal);
-    addLog(newVal ? 'Оператор запустив витяжну вентиляцію купола.' : 'Оператор зупинив вентиляцію.', 'action');
+    updateSector(activeSector.id, { fanActive: newVal });
+    addLog(
+      `[${activeSector.name}] Оператор ${newVal ? 'увімкнув вентиляцію' : 'вимкнув вентиляцію'}.`,
+      'action'
+    );
   };
 
   const triggerAnomaly = () => {
-    setTemp(31.4);
-    setHumidity(46.0);
-    addLog('Критичне відхилення: зафіксовано перегрів (31.4°C) та падіння вологості ґрунту (46%).', 'warning');
+    const spikeTemp = Number((activeSector.maxTemp + 3.4).toFixed(1));
+    const dropHum = Number((activeSector.minHumidity - 9.0).toFixed(1));
+    updateSector(activeSector.id, { temp: spikeTemp, humidity: dropHum });
+    addLog(
+      `[${activeSector.name}] Аварійне відхилення: ${spikeTemp}°C, вологість ${dropHum}%.`,
+      'warning'
+    );
   };
 
+  // Фонове опитування всіх 3 секторів кожні 6 секунд
   useEffect(() => {
     const interval = setInterval(() => {
-      const { isAuto: auto, pumpActive: pump, fanActive: fan, temp: curTemp, humidity: curHum } = stateRef.current;
-
-      let tempDelta = (Math.random() - 0.48) * 0.3;
-      if (fan) tempDelta = -0.6;
-      const nextTemp = Number(Math.max(15, Math.min(40, curTemp + tempDelta)).toFixed(1));
-
-      if (auto && nextTemp > 28 && !fan) {
-        setFanActive(true);
-        addLog(`Автоматика: температура ${nextTemp}°C перевищила поріг (28°C). Запущено вентиляцію.`, 'warning');
-      } else if (auto && nextTemp <= 25 && fan) {
-        setFanActive(false);
-        addLog(`Автоматика: температура стабілізувалася (${nextTemp}°C). Вентиляцію вимкнено.`, 'info');
-      }
-
-      let humDelta = (Math.random() - 0.52) * 0.4;
-      if (pump) humDelta = +1.4;
-      const nextHum = Number(Math.max(30, Math.min(95, curHum + humDelta)).toFixed(1));
-
-      if (auto && nextHum < 55 && !pump) {
-        setPumpActive(true);
-        addLog(`Автоматика: вологість впала до ${nextHum}%. Активовано автополив.`, 'warning');
-      } else if (auto && nextHum >= 68 && pump) {
-        setPumpActive(false);
-        addLog(`Автоматика: вологість досягла норми (${nextHum}%). Полив зупинено.`, 'info');
-      }
-
-      setTemp(nextTemp);
-      setHumidity(nextHum);
-
       const timeLabel = new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      setChartData((prevChart) => [
-        ...prevChart.slice(-9),
-        { time: timeLabel, temp: nextTemp, humidity: nextHum },
-      ]);
+
+      setSectors((prevSectors) =>
+        prevSectors.map((sec) => {
+          let tempDelta = (Math.random() - 0.48) * 0.3;
+          if (sec.fanActive) tempDelta = -0.6;
+          const nextTemp = Number(Math.max(15, Math.min(42, sec.temp + tempDelta)).toFixed(1));
+
+          let nextFan = sec.fanActive;
+          if (sec.isAuto && nextTemp > sec.maxTemp && !sec.fanActive) {
+            nextFan = true;
+            addLog(`[${sec.name}] Автоматика: перегрів (${nextTemp}°C). Активовано вентиляцію.`, 'warning');
+          } else if (sec.isAuto && nextTemp <= sec.maxTemp - 3 && sec.fanActive) {
+            nextFan = false;
+            addLog(`[${sec.name}] Автоматика: температуру нормалізовано (${nextTemp}°C).`, 'info');
+          }
+
+          let humDelta = (Math.random() - 0.52) * 0.4;
+          if (sec.pumpActive) humDelta = +1.4;
+          const nextHum = Number(Math.max(30, Math.min(95, sec.humidity + humDelta)).toFixed(1));
+
+          let nextPump = sec.pumpActive;
+          if (sec.isAuto && nextHum < sec.minHumidity && !sec.pumpActive) {
+            nextPump = true;
+            addLog(`[${sec.name}] Автоматика: низька вологість (${nextHum}%). Запущено полив.`, 'warning');
+          } else if (sec.isAuto && nextHum >= sec.targetHumidity && sec.pumpActive) {
+            nextPump = false;
+            addLog(`[${sec.name}] Автоматика: вологість у нормі (${nextHum}%). Полив зупинено.`, 'info');
+          }
+
+          return {
+            ...sec,
+            temp: nextTemp,
+            humidity: nextHum,
+            fanActive: nextFan,
+            pumpActive: nextPump,
+            chart: [...sec.chart.slice(-9), { time: timeLabel, temp: nextTemp, humidity: nextHum }],
+          };
+        })
+      );
     }, 6000);
 
     return () => clearInterval(interval);
   }, []);
 
+  const isTempAlert = activeSector.temp > activeSector.maxTemp;
+  const isHumAlert = activeSector.humidity < activeSector.minHumidity;
+
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 flex flex-col font-sans antialiased">
-      <Navbar isAuto={isAuto} />
+      <Navbar isAuto={activeSector.isAuto} />
 
       <main className="flex-1 p-6 max-w-6xl mx-auto w-full space-y-5">
-        {/* Заголовок робочої області */}
+        {/* Навігація по секторах + фільтр */}
+        <SectorTabs
+          sectors={sectors}
+          activeId={activeSector.id}
+          onSelect={setActiveId}
+          showOnlyAlerts={showOnlyAlerts}
+          setShowOnlyAlerts={setShowOnlyAlerts}
+        />
+
+        {/* Заголовок сектора + тест збою */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900">Оперативні показники середовища</h2>
-            <p className="text-xs text-zinc-500">Діапазон норми: 18–28 °C / 55–80 % вологості</p>
+            <h2 className="text-lg font-semibold text-zinc-900">{activeSector.name}</h2>
+            <p className="text-xs text-zinc-500">
+              Допустимі межі: {activeSector.minTemp}–{activeSector.maxTemp} °C · вологість від {activeSector.minHumidity} %
+            </p>
           </div>
           <button
             onClick={triggerAnomaly}
@@ -124,23 +217,23 @@ export default function App() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="Температура"
-            value={temp}
+            value={activeSector.temp}
             unit="°C"
             icon={Thermometer}
-            status={temp > 28 ? 'Перевищення норми' : fanActive ? 'Охолодження' : 'Норма'}
-            isAlert={temp > 28}
+            status={isTempAlert ? `Вище ${activeSector.maxTemp}°C` : activeSector.fanActive ? 'Охолодження' : 'Норма'}
+            isAlert={isTempAlert}
           />
           <MetricCard
             title="Вологість ґрунту"
-            value={humidity}
+            value={activeSector.humidity}
             unit="%"
             icon={Droplets}
-            status={humidity < 55 ? 'Нижче порогу' : pumpActive ? 'Триває полив' : 'Норма'}
-            isAlert={humidity < 55}
+            status={isHumAlert ? `Нижче ${activeSector.minHumidity}%` : activeSector.pumpActive ? 'Триває полив' : 'Норма'}
+            isAlert={isHumAlert}
           />
           <MetricCard
             title="Освітленість"
-            value="45 200"
+            value={activeSector.light}
             unit="lux"
             icon={Sun}
             status="Штатний рівень"
@@ -148,7 +241,7 @@ export default function App() {
           />
           <MetricCard
             title="Рівень CO₂"
-            value="410"
+            value={activeSector.co2}
             unit="ppm"
             icon={Activity}
             status="Норма"
@@ -157,15 +250,15 @@ export default function App() {
         </div>
 
         {/* Графік */}
-        <GreenhouseChart data={chartData} />
+        <GreenhouseChart data={activeSector.chart} />
 
         {/* Керування */}
         <ControlPanel
-          isAuto={isAuto}
+          isAuto={activeSector.isAuto}
           setIsAuto={handleToggleAuto}
-          pumpActive={pumpActive}
+          pumpActive={activeSector.pumpActive}
           setPumpActive={handleTogglePump}
-          fanActive={fanActive}
+          fanActive={activeSector.fanActive}
           setFanActive={handleToggleFan}
         />
 
