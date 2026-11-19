@@ -1,23 +1,31 @@
-export default function MetricCard({ title, value, unit, icon: Icon, status, trend }) {
+export default function MetricCard({ title, value, unit, icon: Icon, status, isAlert }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg hover:border-slate-700 transition-all flex flex-col justify-between">
+    <div
+      className={`bg-white rounded-xl p-5 border transition-colors flex flex-col justify-between ${
+        isAlert ? 'border-rose-300 bg-rose-50/30' : 'border-zinc-200'
+      }`}
+    >
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-400">{title}</span>
-        <div className="p-2.5 rounded-xl bg-slate-800/60 text-emerald-400 border border-slate-700/50">
-          <Icon className="w-5 h-5" />
-        </div>
+        <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">{title}</span>
+        <Icon className={`w-4 h-4 ${isAlert ? 'text-rose-600' : 'text-zinc-400'}`} />
       </div>
 
-      <div className="my-4">
-        <div className="flex items-baseline space-x-2">
-          <span className="text-3xl font-bold tracking-tight text-white">{value}</span>
-          <span className="text-sm font-semibold text-slate-400">{unit}</span>
-        </div>
+      <div className="my-3 flex items-baseline space-x-1.5">
+        <span className="text-3xl font-semibold tracking-tight text-zinc-900 tabular-nums">
+          {value}
+        </span>
+        <span className="text-sm font-medium text-zinc-500">{unit}</span>
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t border-slate-800/60 text-xs">
-        <span className="text-slate-400">Статус: <strong className="text-emerald-400">{status}</strong></span>
-        <span className="text-emerald-400 font-medium">{trend}</span>
+      <div className="pt-2.5 border-t border-zinc-100 flex items-center justify-between text-xs">
+        <span className="text-zinc-500">Стан</span>
+        <span
+          className={`font-medium ${
+            isAlert ? 'text-rose-600' : 'text-emerald-700'
+          }`}
+        >
+          {status}
+        </span>
       </div>
     </div>
   );

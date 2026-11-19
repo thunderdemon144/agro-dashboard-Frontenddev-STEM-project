@@ -2,35 +2,60 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianG
 
 export default function GreenhouseChart({ data }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg text-white">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white border border-zinc-200 rounded-xl p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-zinc-100">
         <div>
-          <h3 className="text-base font-bold">Динаміка кліматичних показників</h3>
-          <p className="text-xs text-slate-400 mt-0.5">Оперативний моніторинг температури та вологості за добу</p>
+          <h3 className="text-sm font-semibold text-zinc-900">Телеметрія мікроклімату</h3>
+          <p className="text-xs text-zinc-500">Інтервал опитування сенсорів: 6 с</p>
         </div>
-        <div className="flex items-center space-x-3 text-xs">
+        <div className="flex items-center space-x-4 text-xs font-medium text-zinc-600">
           <div className="flex items-center space-x-1.5">
-            <span className="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span>
-            <span className="text-slate-300">Температура (°C)</span>
+            <span className="w-2.5 h-0.5 bg-zinc-900 inline-block"></span>
+            <span>Температура (°C)</span>
           </div>
           <div className="flex items-center space-x-1.5">
-            <span className="w-3 h-3 rounded-full bg-sky-400 inline-block"></span>
-            <span className="text-slate-300">Вологість (%)</span>
+            <span className="w-2.5 h-0.5 bg-sky-600 inline-block"></span>
+            <span>Вологість (%)</span>
           </div>
         </div>
       </div>
 
-      <div className="h-72 w-full mt-4">
+      <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="time" stroke="#64748b" textAnchor="end" tick={{ fontSize: 12 }} />
-            <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
+          <LineChart data={data} margin={{ top: 8, right: 12, left: -22, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
+            <XAxis dataKey="time" stroke="#a1a1aa" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} />
+            <YAxis stroke="#a1a1aa" tick={{ fontSize: 11, fill: '#71717a' }} tickLine={false} domain={['auto', 'auto']} />
             <Tooltip
-              contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '0.75rem', color: '#fff', fontSize: '12px' }}
+              contentStyle={{
+                backgroundColor: '#ffffff',
+                borderColor: '#e4e4e7',
+                borderRadius: '0.5rem',
+                color: '#18181b',
+                fontSize: '12px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+              }}
             />
-            <Line type="monotone" dataKey="temp" stroke="#34d399" strokeWidth={3} dot={false} activeDot={{ r: 6 }} name="Температура (°C)" />
-            <Line type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={3} dot={false} activeDot={{ r: 6 }} name="Вологість (%)" />
+            <Line
+              type="monotone"
+              dataKey="temp"
+              stroke="#18181b"
+              strokeWidth={2}
+              dot={{ r: 2.5, fill: '#18181b' }}
+              activeDot={{ r: 5 }}
+              isAnimationActive={false}
+              name="Температура (°C)"
+            />
+            <Line
+              type="monotone"
+              dataKey="humidity"
+              stroke="#0284c7"
+              strokeWidth={2}
+              dot={{ r: 2.5, fill: '#0284c7' }}
+              activeDot={{ r: 5 }}
+              isAnimationActive={false}
+              name="Вологість (%)"
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>

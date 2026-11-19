@@ -1,77 +1,88 @@
-import { Droplet, Wind, Power, Sliders } from 'lucide-react';
+import { Droplet, Wind, Sliders } from 'lucide-react';
 
 export default function ControlPanel({ isAuto, setIsAuto, pumpActive, setPumpActive, fanActive, setFanActive }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg text-white">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
-        <div className="flex items-center space-x-3">
-          <Sliders className="w-5 h-5 text-emerald-400" />
-          <h2 className="text-base font-bold">Оперативна диспетчеризація та керування</h2>
+    <div className="bg-white border border-zinc-200 rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-zinc-100">
+        <div className="flex items-center space-x-2">
+          <Sliders className="w-4 h-4 text-zinc-500" />
+          <h2 className="text-sm font-semibold text-zinc-900">Керування виконавчими механізмами</h2>
         </div>
-        <div className="text-xs text-slate-400">Виконавчі модулі IoT-вузла</div>
+        <span className="text-xs text-zinc-400">Контур №1</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Перемикач режиму */}
-        <div className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-4 flex flex-col justify-between">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Режим */}
+        <div className="border border-zinc-200 rounded-lg p-4 flex flex-col justify-between bg-zinc-50/50">
           <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Режим роботи</span>
-            <p className="text-sm font-medium text-white mt-1">Автоматичне регулювання за датчиками</p>
+            <span className="text-xs font-medium text-zinc-500">Контур регулювання</span>
+            <p className="text-sm font-medium text-zinc-900 mt-0.5">
+              {isAuto ? 'Автоматичний (за порогами)' : 'Ручний диспетчерський'}
+            </p>
           </div>
           <button
             onClick={() => setIsAuto(!isAuto)}
-            className={`mt-4 w-full py-2.5 px-4 rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-2 ${
+            className={`mt-4 w-full py-2 px-3 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
               isAuto
-                ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-lg shadow-emerald-500/20'
-                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30'
+                ? 'bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800'
+                : 'bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-100'
             }`}
           >
-            <Power className="w-4 h-4" />
-            <span>{isAuto ? 'Режим: Авто (Увімкнено)' : 'Режим: Ручний'}</span>
+            {isAuto ? 'Перемкнути на ручний режим' : 'Повернути авторежим'}
           </button>
         </div>
 
-        {/* Керування поливом */}
-        <div className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-4 flex flex-col justify-between">
+        {/* Полив */}
+        <div className="border border-zinc-200 rounded-lg p-4 flex flex-col justify-between bg-zinc-50/50">
           <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Система поливу</span>
-            <p className="text-sm font-medium text-white mt-1">Сектор №1 (Капельний полив)</p>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-zinc-500">Клапан поливу</span>
+              <span className={`text-xs font-medium ${pumpActive ? 'text-sky-700' : 'text-zinc-400'}`}>
+                {pumpActive ? 'Увімкнено' : 'Вимкнено'}
+              </span>
+            </div>
+            <p className="text-sm font-medium text-zinc-900 mt-0.5">Крапельна лінія (Сектор 1)</p>
           </div>
           <button
             disabled={isAuto}
             onClick={() => setPumpActive(!pumpActive)}
-            className={`mt-4 w-full py-2.5 px-4 rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-2 ${
+            className={`mt-4 w-full py-2 px-3 rounded-lg text-xs font-medium border transition-colors flex items-center justify-center space-x-1.5 ${
               isAuto
-                ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400'
+                ? 'bg-zinc-100 text-zinc-400 border-zinc-200 cursor-not-allowed'
                 : pumpActive
-                  ? 'bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30'
-                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30'
+                ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 cursor-pointer'
+                : 'bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-100 cursor-pointer'
             }`}
           >
-            <Droplet className="w-4 h-4" />
-            <span>{pumpActive ? 'Вимкнути полив' : 'Увімкнути полив'}</span>
+            <Droplet className="w-3.5 h-3.5" />
+            <span>{pumpActive ? 'Зупинити подачу води' : 'Запустити полив'}</span>
           </button>
         </div>
 
-        {/* Керування вентиляцією */}
-        <div className="bg-slate-800/50 border border-slate-700/60 rounded-xl p-4 flex flex-col justify-between">
+        {/* Вентиляція */}
+        <div className="border border-zinc-200 rounded-lg p-4 flex flex-col justify-between bg-zinc-50/50">
           <div>
-            <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Вентиляція / Клімат</span>
-            <p className="text-sm font-medium text-white mt-1">Витяжні кулери купола</p>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-zinc-500">Витяжна вентиляція</span>
+              <span className={`text-xs font-medium ${fanActive ? 'text-emerald-700' : 'text-zinc-400'}`}>
+                {fanActive ? 'Працює' : 'Зупинено'}
+              </span>
+            </div>
+            <p className="text-sm font-medium text-zinc-900 mt-0.5">Привід фрамуг та кулерів</p>
           </div>
           <button
             disabled={isAuto}
             onClick={() => setFanActive(!fanActive)}
-            className={`mt-4 w-full py-2.5 px-4 rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-2 ${
+            className={`mt-4 w-full py-2 px-3 rounded-lg text-xs font-medium border transition-colors flex items-center justify-center space-x-1.5 ${
               isAuto
-                ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400'
+                ? 'bg-zinc-100 text-zinc-400 border-zinc-200 cursor-not-allowed'
                 : fanActive
-                  ? 'bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30'
-                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30'
+                ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 cursor-pointer'
+                : 'bg-white text-zinc-900 border-zinc-300 hover:bg-zinc-100 cursor-pointer'
             }`}
           >
-            <Wind className="w-4 h-4" />
-            <span>{fanActive ? 'Зупинити вентиляцію' : 'Запустити вентиляцію'}</span>
+            <Wind className="w-3.5 h-3.5" />
+            <span>{fanActive ? 'Вимкнути вентиляцію' : 'Увімкнути вентиляцію'}</span>
           </button>
         </div>
       </div>

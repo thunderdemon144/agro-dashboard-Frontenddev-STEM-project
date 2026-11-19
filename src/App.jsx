@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Thermometer, Droplets, Sun, Activity, Flame } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Thermometer, Droplets, Sun, Activity, AlertCircle } from 'lucide-react';
 import Navbar from './components/Navbar';
 import MetricCard from './components/MetricCard';
 import ControlPanel from './components/ControlPanel';
@@ -25,12 +25,16 @@ export default function App() {
     { id: 1, time: '15:00:00', type: 'info', message: 'Ініціалізація панелі диспетчеризації. Зв’язок із вузлом ESP32 встановлено.' },
   ]);
 
+  const stateRef = useRef({ isAuto, pumpActive, fanActive, temp, humidity });
+  useEffect(() => {
+    stateRef.current = { isAuto, pumpActive, fanActive, temp, humidity };
+  }, [isAuto, pumpActive, fanActive, temp, humidity]);
+
   const addLog = (message, type = 'info') => {
     const now = new Date().toLocaleTimeString('uk-UA');
     setLogs((prev) => [{ id: Date.now() + Math.random(), time: now, type, message }, ...prev.slice(0, 19)]);
   };
 
-  // Обробники перемикачів із записом у журнал
   const handleToggleAuto = (newVal) => {
     setIsAuto(newVal);
     addLog(
@@ -49,122 +53,113 @@ export default function App() {
     addLog(newVal ? 'Оператор запустив витяжну вентиляцію купола.' : 'Оператор зупинив вентиляцію.', 'action');
   };
 
-  // Кнопка для демонстрації критичної ситуації на захисті
   const triggerAnomaly = () => {
     setTemp(31.4);
     setHumidity(46.0);
-    addLog('КРИТИЧНЕ ВІДХИЛЕННЯ: зафіксовано перегрів (31.4°C) та падіння вологості ґрунту (46%)!', 'warning');
+    addLog('Критичне відхилення: зафіксовано перегрів (31.4°C) та падіння вологості ґрунту (46%).', 'warning');
   };
 
-  // Головний цикл оновлення телеметрії кожні 4 секунди
   useEffect(() => {
     const interval = setInterval(() => {
-      setTemp((prevTemp) => {
-        let change = (Math.random() - 0.48) * 0.4;
-        if (fanActive) change = -0.6; // Вентиляція охолоджує повітря
-        const nextTemp = Number(Math.max(15, Math.min(40, prevTemp + change)).toFixed(1));
+      const { isAuto: auto, pumpActive: pump, fanActive: fan, temp: curTemp, humidity: curHum } = stateRef.current;
 
-        // Автоматична реакція системи в режимі Auto
-        if (isAuto && nextTemp > 28 && !fanActive) {
-          setFanActive(true);
-          addLog(`Автоматика: температура ${nextTemp}°C перевищила поріг. Запущено вентиляцію.`, 'warning');
-        } else if (isAuto && nextTemp <= 25 && fanActive) {
-          setFanActive(false);
-          addLog(`Автоматика: температура стабілізувалася (${nextTemp}°C). Вентиляцію вимкнено.`, 'info');
-        }
+      let tempDelta = (Math.random() - 0.48) * 0.3;
+      if (fan) tempDelta = -0.6;
+      const nextTemp = Number(Math.max(15, Math.min(40, curTemp + tempDelta)).toFixed(1));
 
-        return nextTemp;
-      });
+      if (auto && nextTemp > 28 && !fan) {
+        setFanActive(true);
+        addLog(`Автоматика: температура ${nextTemp}°C перевищила поріг (28°C). Запущено вентиляцію.`, 'warning');
+      } else if (auto && nextTemp <= 25 && fan) {
+        setFanActive(false);
+        addLog(`Автоматика: температура стабілізувалася (${nextTemp}°C). Вентиляцію вимкнено.`, 'info');
+      }
 
-      setHumidity((prevHum) => {
-        let change = (Math.random() - 0.52) * 0.5;
-        if (pumpActive) change = +1.2; // Полив підвищує вологість
-        const nextHum = Number(Math.max(30, Math.min(95, prevHum + change)).toFixed(1));
+      let humDelta = (Math.random() - 0.52) * 0.4;
+      if (pump) humDelta = +1.4;
+      const nextHum = Number(Math.max(30, Math.min(95, curHum + humDelta)).toFixed(1));
 
-        if (isAuto && nextHum < 55 && !pumpActive) {
-          setPumpActive(true);
-          addLog(`Автоматика: вологість впала до ${nextHum}%. Активовано автополив.`, 'warning');
-        } else if (isAuto && nextHum >= 68 && pumpActive) {
-          setPumpActive(false);
-          addLog(`Автоматика: вологість досягла норми (${nextHum}%). Полив зупинено.`, 'info');
-        }
+      if (auto && nextHum < 55 && !pump) {
+        setPumpActive(true);
+        addLog(`Автоматика: вологість впала до ${nextHum}%. Активовано автополив.`, 'warning');
+      } else if (auto && nextHum >= 68 && pump) {
+        setPumpActive(false);
+        addLog(`Автоматика: вологість досягла норми (${nextHum}%). Полив зупинено.`, 'info');
+      }
 
-        // Оновлюємо графік новими показниками
-        const timeLabel = new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        setChartData((prevChart) => [
-          ...prevChart.slice(-9), // Тримаємо останні 10 точок, щоб графік не стискався
-          { time: timeLabel, temp, humidity: nextHum },
-        ]);
+      setTemp(nextTemp);
+      setHumidity(nextHum);
 
-        return nextHum;
-      });
-    }, 4000);
+      const timeLabel = new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setChartData((prevChart) => [
+        ...prevChart.slice(-9),
+        { time: timeLabel, temp: nextTemp, humidity: nextHum },
+      ]);
+    }, 6000);
 
     return () => clearInterval(interval);
-  }, [isAuto, pumpActive, fanActive, temp]);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 flex flex-col font-sans antialiased">
       <Navbar isAuto={isAuto} />
 
-      <main className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
-        {/* Верхній банер + кнопка тестової аномалії */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/20 p-6 rounded-2xl shadow-xl">
+      <main className="flex-1 p-6 max-w-6xl mx-auto w-full space-y-5">
+        {/* Заголовок робочої області */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-white tracking-tight">Моніторинг клімату теплиці в реальному часі</h2>
-            <p className="text-sm text-slate-400 mt-1">Збір телеметрії з датчиків ESP32 та керування виконавчими механізмами.</p>
+            <h2 className="text-lg font-semibold text-zinc-900">Оперативні показники середовища</h2>
+            <p className="text-xs text-zinc-500">Діапазон норми: 18–28 °C / 55–80 % вологості</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={triggerAnomaly}
-              className="flex items-center space-x-2 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 px-4 py-2 rounded-xl text-rose-300 text-xs font-semibold transition-all cursor-pointer"
-            >
-              <Flame className="w-4 h-4 text-rose-400" />
-              <span>Симулювати перегрів / посуху</span>
-            </button>
-          </div>
+          <button
+            onClick={triggerAnomaly}
+            className="flex items-center space-x-1.5 bg-white hover:bg-rose-50 border border-zinc-300 hover:border-rose-300 px-3 py-1.5 rounded-lg text-zinc-700 hover:text-rose-700 text-xs font-medium transition-colors cursor-pointer"
+          >
+            <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+            <span>Тест аварійного відхилення</span>
+          </button>
         </div>
 
-        {/* Сітка карток датчиків */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Картки метрик */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
-            title="Температура повітря"
+            title="Температура"
             value={temp}
             unit="°C"
             icon={Thermometer}
-            status={temp > 28 ? 'Перегрів!' : fanActive ? 'Охолодження' : 'Норма'}
-            trend={fanActive ? 'Знижується (-)' : 'Стабільно'}
+            status={temp > 28 ? 'Перевищення норми' : fanActive ? 'Охолодження' : 'Норма'}
+            isAlert={temp > 28}
           />
           <MetricCard
             title="Вологість ґрунту"
             value={humidity}
             unit="%"
             icon={Droplets}
-            status={humidity < 55 ? 'Критично низька!' : pumpActive ? 'Полив активний' : 'Оптимально'}
-            trend={pumpActive ? 'Зростає (+)' : 'У межах норми'}
+            status={humidity < 55 ? 'Нижче порогу' : pumpActive ? 'Триває полив' : 'Норма'}
+            isAlert={humidity < 55}
           />
           <MetricCard
-            title="Рівень освітленості"
-            value="45200"
+            title="Освітленість"
+            value="45 200"
             unit="lux"
             icon={Sun}
-            status="День"
-            trend="Пік активності"
+            status="Штатний рівень"
+            isAlert={false}
           />
           <MetricCard
-            title="Концентрація CO2"
+            title="Рівень CO₂"
             value="410"
             unit="ppm"
             icon={Activity}
-            status="Стабільно"
-            trend="Без аномалій"
+            status="Норма"
+            isAlert={false}
           />
         </div>
 
-        {/* Графік телеметрії */}
+        {/* Графік */}
         <GreenhouseChart data={chartData} />
 
-        {/* Панель керування */}
+        {/* Керування */}
         <ControlPanel
           isAuto={isAuto}
           setIsAuto={handleToggleAuto}
@@ -174,7 +169,7 @@ export default function App() {
           setFanActive={handleToggleFan}
         />
 
-        {/* Журнал подій */}
+        {/* Журнал */}
         <EventLog logs={logs} />
       </main>
     </div>

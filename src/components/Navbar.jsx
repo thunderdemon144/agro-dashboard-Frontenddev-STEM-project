@@ -1,39 +1,35 @@
-import { Sprout, Wifi } from 'lucide-react';
+import { Sprout } from 'lucide-react';
 
 export default function Navbar({ isAuto }) {
   return (
-    <header className="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 text-white shadow-md">
+    <header className="bg-white border-b border-zinc-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center space-x-3">
-        <div className="bg-emerald-500/10 p-2 rounded-xl border border-emerald-500/20">
-          <Sprout className="w-6 h-6 text-emerald-400" />
+        <div className="p-1.5 rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-900">
+          <Sprout className="w-5 h-5" />
         </div>
-        <div>
-          <h1 className="text-lg font-bold tracking-wide">
-            AgroIoT <span className="text-emerald-400">Greenhouse</span>
+        <div className="flex items-baseline space-x-2.5">
+          <h1 className="text-base font-semibold tracking-tight text-zinc-900">
+            AgroIoT Monitor
           </h1>
-          <p className="text-xs text-slate-400">Система моніторингу та диспетчеризації теплиці №1</p>
+          <span className="text-xs text-zinc-400">/</span>
+          <span className="text-xs font-medium text-zinc-500">Вузол: Теплиця №1 (ESP32)</span>
         </div>
       </div>
 
-      <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700 text-xs text-emerald-400">
-          <Wifi className="w-4 h-4 animate-pulse" />
-          <span className="font-medium">ESP32 Online</span>
+      <div className="flex items-center space-x-2.5 text-xs">
+        <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md border border-zinc-200 bg-zinc-50 text-zinc-700 font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+          <span>Зв'язок: Активний</span>
         </div>
 
         <div
-          className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border text-xs font-medium ${
+          className={`px-2.5 py-1 rounded-md border font-medium ${
             isAuto
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
-              : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+              ? 'border-zinc-200 bg-zinc-50 text-zinc-800'
+              : 'border-amber-300 bg-amber-50 text-amber-800'
           }`}
         >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isAuto ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'
-            }`}
-          ></span>
-          <span>{isAuto ? 'Режим: Автоматичний' : 'Режим: Ручне керування'}</span>
+          {isAuto ? 'Режим: Автоматичний' : 'Режим: Ручний'}
         </div>
       </div>
     </header>
