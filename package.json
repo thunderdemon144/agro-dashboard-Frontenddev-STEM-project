@@ -1,10 +1,12 @@
 {
   "name": "agro-dashboard-frontenddev-stem-project",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.js",
+    "start": "concurrently -n \"API,WEB\" -c \"cyan,green\" \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -24,6 +26,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.6.2",
+    "concurrently": "^10.0.7",
     "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
