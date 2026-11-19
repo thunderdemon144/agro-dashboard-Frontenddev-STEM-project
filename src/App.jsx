@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Thermometer, Droplets, Sun, Activity, AlertCircle } from 'lucide-react';
 import Navbar from './components/Navbar';
 import SectorTabs from './components/SectorTabs';
@@ -7,177 +7,90 @@ import ControlPanel from './components/ControlPanel';
 import GreenhouseChart from './components/GreenhouseChart';
 import EventLog from './components/EventLog';
 
-const initialSectors = [
-  {
-    id: 'sec-1',
-    name: 'Сектор №1 · Томати',
-    minTemp: 18,
-    maxTemp: 28,
-    minHumidity: 55,
-    targetHumidity: 68,
-    temp: 24.6,
-    humidity: 66.0,
-    light: '45 200',
-    co2: '410',
-    isAuto: true,
-    pumpActive: false,
-    fanActive: false,
-    chart: [
-      { time: '12:00', temp: 23.2, humidity: 68.0 },
-      { time: '13:00', temp: 24.0, humidity: 67.2 },
-      { time: '14:00', temp: 24.3, humidity: 66.5 },
-      { time: '15:00', temp: 24.6, humidity: 66.0 },
-    ],
-  },
-  {
-    id: 'sec-2',
-    name: 'Сектор №2 · Огірки',
-    minTemp: 20,
-    maxTemp: 30,
-    minHumidity: 65,
-    targetHumidity: 76,
-    temp: 26.4,
-    humidity: 74.5,
-    light: '38 900',
-    co2: '435',
-    isAuto: true,
-    pumpActive: false,
-    fanActive: false,
-    chart: [
-      { time: '12:00', temp: 25.1, humidity: 76.0 },
-      { time: '13:00', temp: 25.8, humidity: 75.4 },
-      { time: '14:00', temp: 26.1, humidity: 74.9 },
-      { time: '15:00', temp: 26.4, humidity: 74.5 },
-    ],
-  },
-  {
-    id: 'sec-3',
-    name: 'Сектор №3 · Розсада',
-    minTemp: 19,
-    maxTemp: 26,
-    minHumidity: 60,
-    targetHumidity: 72,
-    temp: 22.8,
-    humidity: 70.2,
-    light: '29 400',
-    co2: '395',
-    isAuto: true,
-    pumpActive: false,
-    fanActive: false,
-    chart: [
-      { time: '12:00', temp: 21.9, humidity: 71.5 },
-      { time: '13:00', temp: 22.3, humidity: 71.0 },
-      { time: '14:00', temp: 22.5, humidity: 70.6 },
-      { time: '15:00', temp: 22.8, humidity: 70.2 },
-    ],
-  },
-];
+const API_URL = 'http://localhost:3001/api';
 
 export default function App() {
-  const [sectors, setSectors] = useState(initialSectors);
-  const [activeId, setActiveId] = useState('sec-1');
+  const [sectors, setSectors] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [activeId, setActiveId] = useState('');
   const [showOnlyAlerts, setShowOnlyAlerts] = useState(false);
-  const [logs, setLogs] = useState([
-    { id: 1, time: '15:00:00', type: 'info', message: 'Систему диспетчеризації запущено. Підключено 3 сенсорні вузли ESP32.' },
-  ]);
+  const [serverOnline, setServerOnline] = useState(true);
+
+  const fetchState = async () => {
+    try {
+      const res = await fetch(`${API_URL}/state`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setSectors(data.sectors);
+      setLogs(data.logs);
+      setServerOnline(true);
+
+      if (data.sectors.length > 0) {
+        setActiveId((prev) =>
+          data.sectors.some((s) => s.id === prev) ? prev : data.sectors[0].id
+        );
+      }
+    } catch {
+      setServerOnline(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchState();
+    const timer = setInterval(fetchState, 3000);
+    return () => clearInterval(timer);
+  }, []);
 
   const activeSector = sectors.find((s) => s.id === activeId) || sectors[0];
 
-  const sectorsRef = useRef(sectors);
-  useEffect(() => {
-    sectorsRef.current = sectors;
-  }, [sectors]);
-
-  const addLog = (message, type = 'info') => {
-    const now = new Date().toLocaleTimeString('uk-UA');
-    setLogs((prev) => [{ id: Date.now() + Math.random(), time: now, type, message }, ...prev.slice(0, 24)]);
+  const handleAddSector = async (payload) => {
+    const res = await fetch(`${API_URL}/sectors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const created = await res.json();
+      await fetchState();
+      setActiveId(created.id);
+    }
   };
 
-  const updateSector = (id, patch) => {
-    setSectors((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  const handleDeleteSector = async (id) => {
+    await fetch(`${API_URL}/sectors/${id}`, { method: 'DELETE' });
+    await fetchState();
   };
 
-  const handleToggleAuto = (newVal) => {
-    updateSector(activeSector.id, { isAuto: newVal });
-    addLog(
-      `[${activeSector.name}] ${newVal ? 'Увімкнено автоматичний режим.' : 'Переведено в ручний контроль.'}`,
-      'action'
+  const updateControls = async (patch) => {
+    if (!activeSector) return;
+    await fetch(`${API_URL}/sectors/${activeSector.id}/controls`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    await fetchState();
+  };
+
+  const triggerAnomaly = async () => {
+    if (!activeSector) return;
+    await fetch(`${API_URL}/sectors/${activeSector.id}/anomaly`, { method: 'POST' });
+    await fetchState();
+  };
+
+  if (!serverOnline) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6 font-sans">
+        <div className="bg-white border border-zinc-200 rounded-xl p-6 max-w-md text-center space-y-2">
+          <h2 className="text-base font-semibold text-zinc-900">Сервер телеметрії недоступний</h2>
+          <p className="text-xs text-zinc-500">
+            Запустіть бекенд у другому терміналі командою <code className="bg-zinc-100 px-1.5 py-0.5 rounded">node server/index.js</code>
+          </p>
+        </div>
+      </div>
     );
-  };
+  }
 
-  const handleTogglePump = (newVal) => {
-    updateSector(activeSector.id, { pumpActive: newVal });
-    addLog(
-      `[${activeSector.name}] Оператор ${newVal ? 'запустив полив' : 'зупинив полив'}.`,
-      'action'
-    );
-  };
-
-  const handleToggleFan = (newVal) => {
-    updateSector(activeSector.id, { fanActive: newVal });
-    addLog(
-      `[${activeSector.name}] Оператор ${newVal ? 'увімкнув вентиляцію' : 'вимкнув вентиляцію'}.`,
-      'action'
-    );
-  };
-
-  const triggerAnomaly = () => {
-    const spikeTemp = Number((activeSector.maxTemp + 3.4).toFixed(1));
-    const dropHum = Number((activeSector.minHumidity - 9.0).toFixed(1));
-    updateSector(activeSector.id, { temp: spikeTemp, humidity: dropHum });
-    addLog(
-      `[${activeSector.name}] Аварійне відхилення: ${spikeTemp}°C, вологість ${dropHum}%.`,
-      'warning'
-    );
-  };
-
-  // Фонове опитування всіх 3 секторів кожні 6 секунд
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const timeLabel = new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-      setSectors((prevSectors) =>
-        prevSectors.map((sec) => {
-          let tempDelta = (Math.random() - 0.48) * 0.3;
-          if (sec.fanActive) tempDelta = -0.6;
-          const nextTemp = Number(Math.max(15, Math.min(42, sec.temp + tempDelta)).toFixed(1));
-
-          let nextFan = sec.fanActive;
-          if (sec.isAuto && nextTemp > sec.maxTemp && !sec.fanActive) {
-            nextFan = true;
-            addLog(`[${sec.name}] Автоматика: перегрів (${nextTemp}°C). Активовано вентиляцію.`, 'warning');
-          } else if (sec.isAuto && nextTemp <= sec.maxTemp - 3 && sec.fanActive) {
-            nextFan = false;
-            addLog(`[${sec.name}] Автоматика: температуру нормалізовано (${nextTemp}°C).`, 'info');
-          }
-
-          let humDelta = (Math.random() - 0.52) * 0.4;
-          if (sec.pumpActive) humDelta = +1.4;
-          const nextHum = Number(Math.max(30, Math.min(95, sec.humidity + humDelta)).toFixed(1));
-
-          let nextPump = sec.pumpActive;
-          if (sec.isAuto && nextHum < sec.minHumidity && !sec.pumpActive) {
-            nextPump = true;
-            addLog(`[${sec.name}] Автоматика: низька вологість (${nextHum}%). Запущено полив.`, 'warning');
-          } else if (sec.isAuto && nextHum >= sec.targetHumidity && sec.pumpActive) {
-            nextPump = false;
-            addLog(`[${sec.name}] Автоматика: вологість у нормі (${nextHum}%). Полив зупинено.`, 'info');
-          }
-
-          return {
-            ...sec,
-            temp: nextTemp,
-            humidity: nextHum,
-            fanActive: nextFan,
-            pumpActive: nextPump,
-            chart: [...sec.chart.slice(-9), { time: timeLabel, temp: nextTemp, humidity: nextHum }],
-          };
-        })
-      );
-    }, 6000);
-
-    return () => clearInterval(interval);
-  }, []);
+  if (!activeSector) return null;
 
   const isTempAlert = activeSector.temp > activeSector.maxTemp;
   const isHumAlert = activeSector.humidity < activeSector.minHumidity;
@@ -187,16 +100,16 @@ export default function App() {
       <Navbar isAuto={activeSector.isAuto} />
 
       <main className="flex-1 p-6 max-w-6xl mx-auto w-full space-y-5">
-        {/* Навігація по секторах + фільтр */}
         <SectorTabs
           sectors={sectors}
           activeId={activeSector.id}
           onSelect={setActiveId}
           showOnlyAlerts={showOnlyAlerts}
           setShowOnlyAlerts={setShowOnlyAlerts}
+          onAddSector={handleAddSector}
+          onDeleteSector={handleDeleteSector}
         />
 
-        {/* Заголовок сектора + тест збою */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-zinc-900">{activeSector.name}</h2>
@@ -213,7 +126,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Картки метрик */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="Температура"
@@ -249,20 +161,17 @@ export default function App() {
           />
         </div>
 
-        {/* Графік */}
         <GreenhouseChart data={activeSector.chart} />
 
-        {/* Керування */}
         <ControlPanel
           isAuto={activeSector.isAuto}
-          setIsAuto={handleToggleAuto}
+          setIsAuto={(val) => updateControls({ isAuto: val })}
           pumpActive={activeSector.pumpActive}
-          setPumpActive={handleTogglePump}
+          setPumpActive={(val) => updateControls({ pumpActive: val })}
           fanActive={activeSector.fanActive}
-          setFanActive={handleToggleFan}
+          setFanActive={(val) => updateControls({ fanActive: val })}
         />
 
-        {/* Журнал */}
         <EventLog logs={logs} />
       </main>
     </div>
